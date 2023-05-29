@@ -6,11 +6,12 @@
 # REFLECTOR_LICENSE environment variable accordingly.
 
 
-version:  1.0
-products: reflector
-licensee: support@appinf.com
-devices:  10
-domain:   demo.my-devices.net
-issued:   2020-08-21
-expires:  2021-08-21
-key:      1ca4e70ec0de2c6f5a074648c43f2af29301c089
+version:     1.1
+products:    reflector
+licensee:    support@appinf.com
+devices:     10
+domain:      demo.my-devices.net
+issued:      2023-05-29
+expires:     2033-05-26
+maintenance: 2024-05-29
+key:         da8b002d39e8f23e6267c8bef6394b9def963422

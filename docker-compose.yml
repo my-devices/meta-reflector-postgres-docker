@@ -4,34 +4,33 @@ services:
     build: reflector
     restart: always
     depends_on:
-      - mariadb
+      - postgres
       - redis
     environment:
       REFLECTOR_DOMAIN: demo.my-devices.net
       REFLECTOR_LICENSE: /home/reflector/etc/reflector.license
       HTTP_PORT: 8000
-      MYSQL_DATABASE: reflector
-      MYSQL_USERNAME: reflector
-      MYSQL_PASSWORD: reflector
-      MYSQL_HOST: mariadb
+      POSTGRES_DATABASE: reflector
+      POSTGRES_USERNAME: reflector
+      POSTGRES_PASSWORD: reflector
+      POSTGRES_HOST: postgres
       MIGRATE_SCHEMA: "true"
       LOGCHANNEL: file
       LOGPATH: /home/reflector/var/log/reflector.log
     volumes:
       - logvolume:/home/reflector/var/log
 
-  mariadb:
-    image: mariadb
+  postgres:
+    image: postgres
     restart: always
     environment:
-      MYSQL_ROOT_PASSWORD: s3cr3t
-      MYSQL_DATABASE: reflector
-      MYSQL_USER: reflector
-      MYSQL_PASSWORD: reflector
+      POSTGRES_USER: reflector
+      POSTGRES_PASSWORD: reflector
+      POSTGRES_DB: reflector
     volumes:
-      - datavolume:/var/lib/mysql
+      - datavolume:/var/lib/postgresql/data
     ports:
-      - "127.0.0.1:3306:3306"
+       - "127.0.0.1:5432:5432"
 
   haproxy:
     build: haproxy

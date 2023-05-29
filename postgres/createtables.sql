@@ -1,7 +1,7 @@
 --
--- createtables.sql
+-- createtables_postgres.sql
 --
--- Create SQL tables for OSP Auth bundle and reflector device database.
+-- Create PostgreSQL tables for OSP Auth bundle and reflector device database.
 -- Will also create user "admin" (password "admin")
 -- with administrator permissions ("bundleAdmin" and "authAdmin") and
 -- access to all devices ("reflector.device:*", "reflector.domain:*").
@@ -14,17 +14,19 @@
 CREATE TABLE auth_user
 (
 	username VARCHAR(64) PRIMARY KEY NOT NULL,
-	password VARCHAR(64) NOT NULL,
+	password VARCHAR(256) NOT NULL,
 	tenant VARCHAR(64),
 	domain VARCHAR(64),
-	firstName VARCHAR(64),
-	lastName VARCHAR(64),
+	"firstName" VARCHAR(64),
+	"lastName" VARCHAR(64),
 	organization VARCHAR(64),
 	email VARCHAR(256),
 	tags VARCHAR(256),
-	lastLogin VARCHAR(32),
-	createdBy VARCHAR(64),
-	created VARCHAR(32)
+	"lastLogin" VARCHAR(32),
+	"createdBy" VARCHAR(64),
+	created VARCHAR(32),
+	auth_failures INTEGER NOT NULL DEFAULT 0,
+	auth_lockout VARCHAR(32)
 );
 
 CREATE TABLE auth_role
@@ -62,28 +64,31 @@ CREATE INDEX auth_user_permissions_index ON auth_user_permissions(username);
 CREATE INDEX auth_role_permissions_index ON auth_role_permissions(rolename);
 CREATE INDEX auth_user_attributes_index ON auth_user_attributes(username);
 CREATE UNIQUE INDEX auth_user_attributes_attr_index ON auth_user_attributes(username, attribute);
-CREATE INDEX auth_user_attributes_value_index ON auth_user_attributes(attribute, value(64));
+CREATE INDEX auth_user_attributes_value_index ON auth_user_attributes(attribute, (left(value, 64)));
 
-INSERT INTO auth_user (username, password) VALUES("admin", "3d29e163b9107fcb31077b45b47026e2");
+INSERT INTO auth_user (username, password) VALUES('admin', '3d29e163b9107fcb31077b45b47026e2');
 
-INSERT INTO auth_role VALUES("systemAdmin");
-INSERT INTO auth_role VALUES("reflectorAdmin");
-INSERT INTO auth_role VALUES("authAdmin");
-INSERT INTO auth_role VALUES("user");
-INSERT INTO auth_role VALUES("powerUser");
+INSERT INTO auth_role VALUES('systemAdmin');
+INSERT INTO auth_role VALUES('reflectorAdmin');
+INSERT INTO auth_role VALUES('authAdmin');
+INSERT INTO auth_role VALUES('tenantAdmin');
+INSERT INTO auth_role VALUES('user');
+INSERT INTO auth_role VALUES('powerUser');
 
-INSERT INTO auth_role_permissions VALUES("systemAdmin", "bundleAdmin");
-INSERT INTO auth_role_permissions VALUES("systemAdmin", "authAdmin");
-INSERT INTO auth_role_permissions VALUES("reflectorAdmin", "reflector.device:*");
-INSERT INTO auth_role_permissions VALUES("reflectorAdmin", "reflector.domain:*");
-INSERT INTO auth_role_permissions VALUES("reflectorAdmin", "reflector.device.*");
-INSERT INTO auth_role_permissions VALUES("reflectorAdmin", "domainAdmin");
-INSERT INTO auth_role_permissions VALUES("reflectorAdmin", "tenantAdmin");
-INSERT INTO auth_role_permissions VALUES("authAdmin", "reflector.user.*");
-INSERT INTO auth_role_permissions VALUES("powerUser", "reflector.device.*");
-INSERT INTO auth_user_roles VALUES("admin", "systemAdmin");
-INSERT INTO auth_user_roles VALUES("admin", "reflectorAdmin");
-INSERT INTO auth_user_roles VALUES("admin", "authAdmin");
+INSERT INTO auth_role_permissions VALUES('systemAdmin', 'bundleAdmin');
+INSERT INTO auth_role_permissions VALUES('systemAdmin', 'authAdmin');
+INSERT INTO auth_role_permissions VALUES('reflectorAdmin', 'reflector.device:*');
+INSERT INTO auth_role_permissions VALUES('reflectorAdmin', 'reflector.domain:*');
+INSERT INTO auth_role_permissions VALUES('reflectorAdmin', 'reflector.device.*');
+INSERT INTO auth_role_permissions VALUES('reflectorAdmin', 'domainAdmin');
+INSERT INTO auth_role_permissions VALUES('reflectorAdmin', 'tenantAdmin');
+INSERT INTO auth_role_permissions VALUES('authAdmin', 'reflector.user.*');
+INSERT INTO auth_role_permissions VALUES('tenantAdmin', 'reflector.user.*');
+INSERT INTO auth_role_permissions VALUES('tenantAdmin', 'tenantAdmin');
+INSERT INTO auth_role_permissions VALUES('powerUser', 'reflector.device.*');
+INSERT INTO auth_user_roles VALUES('admin', 'systemAdmin');
+INSERT INTO auth_user_roles VALUES('admin', 'reflectorAdmin');
+INSERT INTO auth_user_roles VALUES('admin', 'authAdmin');
 
 --
 -- Reflector
@@ -95,7 +100,7 @@ CREATE TABLE reflector_systemprop
 	value VARCHAR(1024)
 );
 
-INSERT INTO reflector_systemprop VALUES ('schemaVersion', 9);
+INSERT INTO reflector_systemprop VALUES ('schemaVersion', 12);
 
 CREATE TABLE reflector_domain
 (
@@ -103,7 +108,7 @@ CREATE TABLE reflector_domain
 	name VARCHAR(128),
 	description VARCHAR(1024),
 	tags VARCHAR(256),
-	createdBy VARCHAR(64),
+	"createdBy" VARCHAR(64),
 	created VARCHAR(32)
 );
 
@@ -127,7 +132,7 @@ CREATE TABLE reflector_tenant
 	name VARCHAR(128),
 	description VARCHAR(1024),
 	tags VARCHAR(256),
-	createdBy VARCHAR(64),
+	"createdBy" VARCHAR(64),
 	created VARCHAR(32)
 );
 
@@ -157,19 +162,20 @@ CREATE TABLE reflector_device
 	server VARCHAR(64),
 	online BOOLEAN,
 	protocol VARCHAR(16),
-	lastConnect VARCHAR(32),
+	"lastConnect" VARCHAR(32),
 	host VARCHAR(64),
 	port VARCHAR(8),
-	domain VARCHAR(48) ,
-	userAgent VARCHAR(256),
-	hashedPassword VARCHAR(64),
-	createdBy VARCHAR(64),
+	domain VARCHAR(48),
+	tenant VARCHAR(48),
+	"userAgent" VARCHAR(256),
+	"hashedPassword" VARCHAR(64),
+	"createdBy" VARCHAR(64),
 	created VARCHAR(32),
 	category VARCHAR(256),
 	site VARCHAR(256),
 	serial VARCHAR(48),
-	bytesTx BIGINT,
-	bytesRx BIGINT,
+	"bytesTx" BIGINT,
+	"bytesRx" BIGINT,
 	connects BIGINT,
 
 	FOREIGN KEY (domain) REFERENCES reflector_domain (id) ON DELETE CASCADE
@@ -179,8 +185,10 @@ CREATE UNIQUE INDEX reflector_device_index ON reflector_device(id, online);
 CREATE INDEX reflector_device_category_index ON reflector_device(category);
 CREATE INDEX reflector_device_site_index ON reflector_device(site);
 CREATE INDEX reflector_device_serial_index ON reflector_device(serial);
-CREATE INDEX reflector_device_createdBy_index ON reflector_device(createdBy);
+CREATE INDEX reflector_device_createdBy_index ON reflector_device("createdBy");
 CREATE INDEX reflector_device_created_index ON reflector_device(created);
+CREATE INDEX reflector_device_domain_index ON reflector_device(domain, online);
+CREATE INDEX reflector_device_tenant_index ON reflector_device(tenant, online);
 
 CREATE TABLE reflector_deviceprop
 (
@@ -195,11 +203,31 @@ CREATE INDEX reflector_deviceprop_device_index ON reflector_deviceprop(device);
 CREATE UNIQUE INDEX reflector_deviceprop_prop_index ON reflector_deviceprop(device, name);
 CREATE INDEX reflector_deviceprop_name_index ON reflector_deviceprop(name);
 
+CREATE TABLE reflector_devicelog
+(
+	device VARCHAR(48) NOT NULL,
+	timestamp TIMESTAMP NOT NULL,
+	event INTEGER NOT NULL,
+	status INTEGER NOT NULL,
+	data VARCHAR(256),
+
+	FOREIGN KEY (device) REFERENCES reflector_device (id) ON DELETE CASCADE
+);
+
+CREATE INDEX reflector_devicelog_device_timestamp_index ON reflector_devicelog(device, timestamp);
+CREATE INDEX reflector_devicelog_timestamp_index ON reflector_devicelog(timestamp);
+
 -- Trigger to delete device permission if referenced device is deleted
-DELIMITER //
-CREATE TRIGGER delete_device_permission AFTER DELETE ON reflector_device
-FOR EACH ROW
+CREATE OR REPLACE FUNCTION delete_device_permission() RETURNS TRIGGER
+AS $$
 BEGIN
-DELETE FROM auth_user_permissions WHERE permission = CONCAT('reflector.device:', old.id);
-DELETE FROM auth_role_permissions WHERE permission = CONCAT('reflector.device:', old.id);
-END;//
+	DELETE FROM auth_user_permissions WHERE permission = CONCAT('reflector.device:', OLD.id);
+	DELETE FROM auth_role_permissions WHERE permission = CONCAT('reflector.device:', OLD.id);
+	RETURN NULL;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER delete_device_permission_trigger 
+	AFTER DELETE ON reflector_device
+	FOR EACH ROW
+	EXECUTE PROCEDURE delete_device_permission();

@@ -1,4 +1,4 @@
-# The macchina.io REMOTE Server Docker Compose Configuration
+# The macchina.io REMOTE Server Docker Compose Configuration (PostgreSQL Version)
 
 ## About macchina.io REMOTE
 
@@ -33,7 +33,7 @@ server with Docker. This includes:
   - the macchina.io REMOTE Server (also known as *reflector*, from the
     [macchina/reflector](https://hub.docker.com/repository/docker/macchina/reflector)
     repository on [Docker Hub](https://hub.docker.com)
-  - a [MariaDB](https://hub.docker.com/_/mariadb) server
+  - a [PostgreSQL](https://hub.docker.com/_/postgres) server
   - a [HAProxy](https://hub.docker.com/_/haproxy) server as frontend to the
     macchina.io REMOTE server, providing TLS termination and load balancing
   - a [Redis](https://hub.docker.com/_/redis) server, used for storing
@@ -45,7 +45,7 @@ server with Docker. This includes:
 To run the macchina.io REMOTE server, you will need the following:
 
   - A host system (Linux, macOS, Windows) with Docker and Docker Compose installed.
-  - The MySQL or MariaDB client (`mysql`) for setting up the database schema.
+  - The PostgreSQL client (`psql`) for setting up the database schema.
   - A wildcard domain with a properly set-up wildcard DNS entry. For example,
     if your macchina.io REMOTE instance will use the domain `devices.company.com`,
     you'll need corresponding DNS entries for `*.devices.company.com` and
@@ -98,7 +98,7 @@ $ docker-compose build
 
 #### Set Up the Database schema
 
-To set-up the MySQL/MariaDB database schema for the macchina.io REMOTE server,
+To set-up the PostgreSQL database schema for the macchina.io REMOTE server,
 first bring up the stack with Docker Compose:
 
 ```
@@ -108,10 +108,10 @@ $ docker-compose up
 Then, in a separate shell, create the database schema.
 
 ```
-$ mysql -h 127.0.0.1 reflector -u reflector -p <mysql/createtables.sql
+$ psql -h 127.0.0.1 -U reflector reflector <postgres/createtables.sql
 ```
 
-The default password for the `reflector` MySQL/MariaDB user is `reflector`
+The default password for the `reflector` PostgreSQL user is `reflector`
 (set in the `docker-compose.yml` file). You may want to change it, along
 with the root password as well.
 
